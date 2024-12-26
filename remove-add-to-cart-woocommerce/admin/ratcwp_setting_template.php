@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<div class="hide_div">
 					<label><?php echo esc_html__('Hide for All Users', 'themelocationratc_hp'); ?></label>
 					<div class="ratcwp_hide_field">
-						<p style="color:red; margin: 0;"><a href="https://www.themelocation.com/remove-cart-button-plugin/" target="_blank" style="text-decoration: none; color: red;">Upgrade Premium Version</a></p>
+						<p style="color:red; margin: 0;"><a href="https://www.themelocation.com/remove-cart-button-plugin/" target="_blank" style="text-decoration: none; color: red;" class="asked-for-premium">Upgrade Premium Version</a></p>
 					</div>
 				</div>
 
@@ -60,7 +60,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<div class="hide_div">
 					<label><?php echo esc_html__('Hide Price', 'themelocationratc_hp'); ?></label>
 					<div class="ratcwp_hide_field">
-						<p style="color:red; margin: 0;"><a href="https://www.themelocation.com/remove-cart-button-plugin/" target="_blank" style="text-decoration: none; color: red;">Upgrade Premium Version</a></p>
+						<p style="color:red; margin: 0;"><a href="https://www.themelocation.com/remove-cart-button-plugin/" target="_blank" style="text-decoration: none; color: red;" class="asked-for-premium">Upgrade Premium Version</a></p>
 					</div>
 				</div>
 
@@ -72,6 +72,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 					</div>
 				</div>
 
+
+
 				<div class="hide_div">
 					<label><?php echo esc_html__('Add to Cart Button', 'themelocationratc_hp'); ?></label>
 					<div class="ratcwp_hide_field">
@@ -80,19 +82,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<option value="remove_button" <?php echo selected('remove_button', esc_attr(get_option('ratcwp_hide_cart_button')), false); ?>>Remove Button</option>
 							<option value="inquire_us" <?php echo selected('inquire_us', esc_attr(get_option('ratcwp_hide_cart_button')), false); ?>>Inquire Us</option>
 						</select>
-						<p><?php echo esc_html__('If this option is checked then Add To Cart button is hidden on the archive and product pages.', 'themelocationratc_hp'); ?> <span style="color: red"><a href="https://www.themelocation.com/remove-cart-button-plugin/" target="_blank" style="text-decoration: none; color: red;">Change Inquire us (text) by upgrading</a></span></p>
+						<p><?php echo esc_html__('If this option is checked then Add To Cart button is hidden on the archive and product pages.', 'themelocationratc_hp'); ?> <div style="color: red"><a href="https://www.themelocation.com/remove-cart-button-plugin/" target="_blank" style="text-decoration: none; color: red;" class="asked-for-premium">Change Inquire us (text) by upgrading</a></div></p>
 					</div>
 				</div>
 
-				<div class="hide_div hp_cart">
+				<?php 
+					if( get_option('ratcwp_hide_cart_button') == 'inquire_us' ) {
+						$show_inquire = 'show_inquire';
+					} else {
+						$show_inquire = '';
+					}
+				?>
+
+				<div class="hide_div hp_cart <?php echo esc_attr($show_inquire); ?>">
 					<label><?php echo esc_html__('Inquire Us Text', 'themelocationratc_hp'); ?></label>
 					<div class="ratcwp_hide_field">
-						<p style="color:red; margin: 0;"><a href="https://www.themelocation.com/remove-cart-button-plugin/" target="_blank" style="text-decoration: none; color: red;">Upgrade Premium Version</a></p>
+						<p style="color:red; margin: 0;"><a href="https://www.themelocation.com/remove-cart-button-plugin/" target="_blank" style="text-decoration: none; color: red;" class="asked-for-premium">Upgrade Premium Version</a></p>
 						<input type="text" name="ratcwp_cart_button_text" id="ratcwp_cart_button_text" class="ratcwp_hp_input_field" value="Inquire Us" style="display: none;" />
 					</div>
 				</div>
 
-				<div class="hide_div hp_cart">
+				<div class="hide_div hp_cart <?php echo esc_attr($show_inquire); ?>">
 					<label><?php echo esc_html__('Inquire Us Button Link', 'themelocationratc_hp'); ?></label>
 					<div class="ratcwp_hide_field">
 						<input type="text" name="ratcwp_cart_button_link" id="ratcwp_cart_button_link" class="ratcwp_hp_input_field" value="<?php echo esc_attr(get_option('ratcwp_cart_button_link')); ?>" />
@@ -113,11 +123,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 								foreach ( $ratcwp_hide_products as $pro) {
 
 									$prod_post = get_post($pro);
-
 									?>
-
-										<option value="<?php echo intval($pro); ?>" selected="selected"><?php echo esc_attr($prod_post->post_title); ?></option>
-
+									<option value="<?php echo intval($pro); ?>" selected="selected"><?php echo esc_attr($prod_post->post_title); ?></option>
 									<?php 
 								}
 							}
@@ -355,6 +362,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 							</ul>
 						</div>
 						<p><?php echo esc_html__('Select Categories for which Products you want to hide price and add to cart.', 'themelocationratc_hp'); ?></p>
+						<p><?php echo esc_html__('Convert your Shop to showcase shop', 'themelocationratc_hp'); ?></p>
 					</div>
 				</div>
 
@@ -363,8 +371,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 
 			<p><?php submit_button(esc_html__('Save Settings', 'themelocationratc_hp' ), 'primary', 'ratcwprole_save_hide_price'); ?></p>
-
-			
 		</div>
 	</form>
 </div>
+
+<script>
+	document.addEventListener('DOMContentLoaded', function() {
+		document.querySelector('form').addEventListener('submit', function(e) {
+			const guestCheckbox = document.getElementById('ratcwp_enable_hide_pirce_guest');
+			const registeredCheckbox = document.getElementById('ratcwp_enable_hide_pirce_registered');
+			
+			if (!guestCheckbox.checked && !registeredCheckbox.checked) {
+				e.preventDefault();
+				alert('Please select at least one option: Hide for Guest Users or Hide for Registered Users');
+				return false;
+			}
+		});
+	});
+</script>

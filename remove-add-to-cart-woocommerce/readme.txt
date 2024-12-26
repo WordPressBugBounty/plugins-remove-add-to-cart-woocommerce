@@ -3,9 +3,9 @@ Contributors: themelocation
 Donate link: https://www.paypal.me/themelocation
 Tags: WooCommerce, add to cart, remove button
 Requires at least: 5.4
-Tested up to: 6.4.3
-Version: 1.4.5
-Stable Tag: 1.4.5
+Tested up to: 6.7.1
+Version: 1.4.7
+Stable Tag: 1.4.7
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 

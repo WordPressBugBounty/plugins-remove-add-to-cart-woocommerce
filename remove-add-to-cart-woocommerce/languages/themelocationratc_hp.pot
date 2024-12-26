@@ -107,6 +107,11 @@ msgid ""
 "Select Categories for which Products you want to hide price and add to cart."
 msgstr ""
 
+#: admin/ratcwp_setting_template.php:365
+msgid ""
+"Convert your Shop to showcase shop."
+msgstr ""
+
 #: admin/ratcwp_setting_template.php:373
 msgid "Save Settings"
 msgstr ""

@@ -151,7 +151,6 @@ if ( !class_exists( 'Ratcwp_Hide_Price_Admin' ) ) {
 					'ratcwp_enable_hide_pirce_all',
 					'ratcwp_enable_hide_pirce_guest',
 					'ratcwp_enable_hide_pirce_registered',
-					'ratcwp_hide_cart_button',
 					'ratcwp_hide_price',
 				);
 			
@@ -161,6 +160,10 @@ if ( !class_exists( 'Ratcwp_Hide_Price_Admin' ) ) {
 
 				if( isset($_POST['ratcwp_hide_user_role']) ) {
 					update_option('ratcwp_hide_user_role', serialize($_POST['ratcwp_hide_user_role']));
+				}		
+				
+				if( isset($_POST['ratcwp_hide_cart_button']) ) {
+					update_option('ratcwp_hide_cart_button', sanitize_text_field($_POST['ratcwp_hide_cart_button']));
 				}		
 				
 				if( isset($_POST['ratcwp_hide_products']) ) {

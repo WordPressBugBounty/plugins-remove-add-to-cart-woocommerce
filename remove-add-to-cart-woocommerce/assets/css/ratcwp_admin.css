@@ -25,3 +25,13 @@
 .ratcwp_hide_field ul li ul {
     padding-left: 20px;
 }
+.show_inquire {
+    display: block !important;
+}
+
+.asked-for-premium {
+    border: 1px solid;
+    font-size: 15px;
+    padding: 10px;
+    display: inline-block;
+}

@@ -3,9 +3,9 @@
   Plugin Name: woo-inquire-us-and-disable-add-to-cart-button
   Plugin URI: https://www.themelocation.com/remove-cart-button-plugin/
   Description: This plugin removes add to cart from individual Product, Whole Category. It changes add to cart button to contact us button. It also hide product Price from Category as well as individual Product. We provide best possible support.
-  Requires at least: 5.4
-  Tested up to: 6.4.3
-  Version: 1.4.5
+  Requires at least: 4.6
+  Tested up to: 6.7.1
+  Version: 1.4.7
   Author: themelocation
   Author URI: https://www.themelocation.com
  */
@@ -49,9 +49,7 @@ require_once dirname( __FILE__ ) . '/ratcwp-hide-price.php';
  
 
 add_action('product_cat_edit_form_fields', 'wpiudacb_edit_form_fields');
-add_action('product_cat_edit_form', 'wpiudacb_edit_form');
 add_action('product_cat_add_form_fields', 'wpiudacb_edit_form_fields');
-add_action('product_cat_add_form', 'wpiudacb_edit_form');
 
 
 if (!function_exists('wpiudacb_scripts')) {
@@ -134,28 +132,32 @@ add_action('created_product_cat', 'wpiudacb_save_extra_fileds');
  * save extra category extra fields callback function
  * @param type $term_id
  */
-if (!function_exists('wpiudacb_save_extra_fileds')) {
-
-    function wpiudacb_save_extra_fileds($term_id) {
+if (!function_exists('wpiudacb_save_extra_fields')) { // Corrected the typo here
+    function wpiudacb_save_extra_fields($term_id) {
         $termid = $term_id;
+
+        // Save or update 'category disable add to cart' option
         if (isset($_POST['wpiudacb_category_disable_add_to_cart'])) {
             $cat_meta = get_option("wpiudacb_category_disable_add_to_cart_$termid");
+            $value = sanitize_text_field($_POST['wpiudacb_category_disable_add_to_cart']);
             if ($cat_meta !== false) {
-                update_option("wpiudacb_category_disable_add_to_cart_$termid", $_POST['wpiudacb_category_disable_add_to_cart']);
+                update_option("wpiudacb_category_disable_add_to_cart_$termid", $value);
             } else {
-                add_option("wpiudacb_category_disable_add_to_cart_$termid", $_POST['wpiudacb_category_disable_add_to_cart'], '', 'yes');
+                add_option("wpiudacb_category_disable_add_to_cart_$termid", $value, '', 'yes');
             }
         }
+
+        // Save or update 'inquire us link' option
         if (isset($_POST['wpiudacb_inqure_us_link'])) {
             $cat_meta = get_option("wpiudacb_inqure_us_link_$termid");
+            $value = esc_url($_POST['wpiudacb_inqure_us_link']);
             if ($cat_meta !== false) {
-                update_option("wpiudacb_inqure_us_link_$termid", $_POST['wpiudacb_inqure_us_link']);
+                update_option("wpiudacb_inqure_us_link_$termid", $value);
             } else {
-                add_option("wpiudacb_inqure_us_link_$termid", $_POST['wpiudacb_inqure_us_link'], '');
+                add_option("wpiudacb_inqure_us_link_$termid", $value, '');
             }
         }
     }
-
 }
 
 // when a category is removed
@@ -166,16 +168,19 @@ add_filter('deleted_term_taxonomy', 'wpiudacb_remove_tax_Extras');
  * @param type $term_id
  */
 if (!function_exists('wpiudacb_remove_tax_Extras')) {
-
     function wpiudacb_remove_tax_Extras($term_id) {
         $termid = $term_id;
-        if ($_POST['taxonomy'] == 'product_cat'):
-            if (get_option("wpiudacb_category_disable_add_to_cart_$termid"))
-                delete_option("wpiudacb_category_disable_add_to_cart_$termid");
-        endif;
-    }
 
+        // Check if 'taxonomy' exists in $_POST and sanitize the value
+        if (isset($_POST['taxonomy']) && sanitize_text_field($_POST['taxonomy']) === 'product_cat') {
+            // Delete the 'category disable add to cart' option if it exists
+            if (get_option("wpiudacb_category_disable_add_to_cart_$termid")) {
+                delete_option("wpiudacb_category_disable_add_to_cart_$termid");
+            }
+        }
+    }
 }
+
 add_filter('manage_edit-product_cat_columns', 'wpiudacb_taxonomy_columns_type');
 add_filter('manage_product_cat_custom_column', 'wpiudacb_taxonomy_columns_type_manage', 10, 3);
 
@@ -206,22 +211,26 @@ if (!function_exists('wpiudacb_taxonomy_columns_type_manage')) {
     function wpiudacb_taxonomy_columns_type_manage($out, $column_name, $term) {
         global $wp_version;
 
-        $out = get_option("wpiudacb_category_disable_add_to_cart_$term");
+        // Check if $term is an object and get the term ID
+        $term_id = is_object($term) ? $term->term_id : $term;
         
-        if (((float) $wp_version) < 3.1){
-			return $out;
-		}
-            
-        else{
-			if($column_name != "thumb" && $column_name != "handle"){
-				echo $out;
-			} 
-			
-		}
-            
-    }
+        // Get the option value for the term, with a default value if not set
+        $out = get_option("wpiudacb_category_disable_add_to_cart_$term_id", '');
 
+        // If WordPress version is less than 3.1, return the option value
+        if ((float) $wp_version < 3.1) {
+            return $out;
+        } else {
+            // Display $out if column_name is neither "thumb" nor "handle"
+            if ($column_name !== "thumb" && $column_name !== "handle") {
+                echo esc_html($out); // Escape output for safety
+            }
+        }
+
+        return $out; // Ensure the function consistently returns a value
+    }
 }
+
 
 //add_action('woocommerce_before_shop_loop_item', 'wpiudacb_replace_add_to_cart');
 
@@ -233,31 +242,40 @@ if (!function_exists('wpiudacb_replace_add_to_cart')) {
 
     function wpiudacb_replace_add_to_cart() {
         global $product;
-        $link = $product->get_permalink();
-        $text = get_post_custom_values('wpiudacb_disable_add_to_cart', $product->get_id());
-
-        $terms = get_the_terms($product->get_id(), 'product_cat');
+    
+        // Ensure $product is available
+        if (!$product || !is_a($product, 'WC_Product')) {
+            return;
+        }
+    
+        // Get the link and custom field value
+        $link = esc_url($product->get_permalink());
+        $text = get_post_meta($product->get_id(), 'wpiudacb_disable_add_to_cart', true);
+    
+        // Default category option value
         $cat_option = 'default';
-
-        if (!empty($terms)) {
-
+    
+        // Get product categories
+        $terms = get_the_terms($product->get_id(), 'product_cat');
+        if (!empty($terms) && is_array($terms)) {
             foreach ($terms as $cat) {
-            
-
-                if (get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id") && get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id") != 'Default') {
-                    $cat_option = get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id");
+                // Check if the option is set for the category and is not set to 'Default'
+                $category_option = get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id");
+                if ($category_option && $category_option !== 'default') {
+                    $cat_option = $category_option;
+                    break; // Exit loop early if a relevant option is found
                 }
             }
-        }     
-
-        if ((!is_null($text) && $text[0] != 'default' ) || $cat_option != 'default') {
-
-            remove_action('woocommerce_after_shop_loop_item', 'woocommerce_template_loop_add_to_cart', 10);
         }
-        else{
+    
+        // Check conditions to add or remove the "Add to Cart" action
+        if (($text && $text !== 'default') || $cat_option !== 'default') {
+            remove_action('woocommerce_after_shop_loop_item', 'woocommerce_template_loop_add_to_cart', 10);
+        } else {
             add_action('woocommerce_after_shop_loop_item', 'woocommerce_template_loop_add_to_cart', 10);
         }
     }
+    
 
 }
 
@@ -270,35 +288,46 @@ if (!function_exists('wpiudacb_replace_add_to_cart_with_inqure_us_on_listing_pag
 
     function wpiudacb_replace_add_to_cart_with_inqure_us_on_listing_page() {
         global $product;
-        $wpiudacb_inqure_us_link = get_post_meta($product->get_id(), 'wpiudacb_inqure_us_link');
-
-        $disable_cart_option = get_post_custom_values('wpiudacb_disable_add_to_cart', $product->get_id());
-
-        $terms = get_the_terms($product->get_id(), 'product_cat');
+    
+        // Ensure $product is available
+        if (!$product || !is_a($product, 'WC_Product')) {
+            return;
+        }
+    
+        // Get custom 'inquire us' link from product meta
+        $wpiudacb_inqure_us_link = get_post_meta($product->get_id(), 'wpiudacb_inqure_us_link', true);
+        $disable_cart_option = get_post_meta($product->get_id(), 'wpiudacb_disable_add_to_cart', true);
+    
+        // Set default values for category options
         $cat_option = 'default';
         $cat_inquire_us_link = '';
-        if (!empty($terms)) {
+    
+        // Get product categories and check for 'disable add to cart' and 'inquire us' link settings
+        $terms = get_the_terms($product->get_id(), 'product_cat');
+        if (!empty($terms) && is_array($terms)) {
             foreach ($terms as $cat) {
-                if (get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id") && get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id") != 'Default') {
-                    $cat_option = get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id");
+                $category_disable_option = get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id");
+                if ($category_disable_option && $category_disable_option !== 'default') {
+                    $cat_option = $category_disable_option;
                     $cat_inquire_us_link = get_option("wpiudacb_inqure_us_link_$cat->term_id");
+                    break; // Exit loop early if a relevant option is found
                 }
             }
         }
-        $inquire_us_added = FALSE;
-        if ($cat_option != 'default') {
+    
+        // Remove "Add to Cart" if any condition requires it
+        if (($cat_option !== 'default' && $cat_option === 'inquire_us') || ($disable_cart_option === 'inquire_us')) {
             remove_action('woocommerce_after_shop_loop_item', 'woocommerce_template_loop_add_to_cart', 10);
-            if ($cat_option == 'inquire_us') {
-                remove_action('woocommerce_after_shop_loop_item', 'woocommerce_template_loop_add_to_cart', 10);
-                echo do_shortcode('<a href="' . esc_url($cat_inquire_us_link) . '" target="_blank" class="button ">'.__('Inquire Us', 'themelocationratc_hp').'</a>');
-                $inquire_us_added = true;
+    
+            // Determine which "Inquire Us" link to display
+            $inquire_link = $cat_option === 'inquire_us' ? $cat_inquire_us_link : $wpiudacb_inqure_us_link;
+    
+            if (!empty($inquire_link)) {
+                echo do_shortcode('<a href="' . esc_url($inquire_link) . '" target="_blank" class="button">' . esc_html__('Inquire Us', 'themelocationratc_hp') . '</a>');
             }
         }
-        if (!is_null($disable_cart_option) && $disable_cart_option[0] == 'inquire_us' && !$inquire_us_added) {
-            remove_action('woocommerce_after_shop_loop_item', 'woocommerce_template_loop_add_to_cart', 10);
-            echo do_shortcode('<a href="' . esc_url($wpiudacb_inqure_us_link[0]) . '" target="_blank" class="button ">'.__('Inquire Us', 'themelocationratc_hp').'</a>');
-        }
-    }    
+    }
+      
 }
 
 /**
@@ -308,47 +337,50 @@ if (!function_exists('wpiudacb_replace_add_to_cart_with_inqure_us_on_listing_pag
  */
 add_filter( 'woocommerce_loop_add_to_cart_link', 'hide_add_to_cart_link', 10, 2 );
 function hide_add_to_cart_link( $html, $product ) {
-    $wpiudacb_inqure_us_link = get_post_meta($product->get_id(), 'wpiudacb_inqure_us_link');
+    // Ensure $product is valid
+    if (!$product || !is_a($product, 'WC_Product')) {
+        return $html;
+    }
 
-    $disable_cart_option = get_post_custom_values('wpiudacb_disable_add_to_cart', $product->get_id());
+    // Get custom 'inquire us' link and disable cart option
+    $wpiudacb_inqure_us_link = get_post_meta($product->get_id(), 'wpiudacb_inqure_us_link', true);
+    $disable_cart_option = get_post_meta($product->get_id(), 'wpiudacb_disable_add_to_cart', true);
 
-    
-    $terms = get_the_terms($product->get_id(), 'product_cat');
+    // Default values for category options
     $cat_option = 'default';
     $cat_inquire_us_link = '';
-    if (!empty($terms)) {
+
+    // Get product categories and check for category-level options
+    $terms = get_the_terms($product->get_id(), 'product_cat');
+    if (!empty($terms) && is_array($terms)) {
         foreach ($terms as $cat) {
-            if (get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id") && get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id") != 'Default') {
-                $cat_option = get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id");
+            $category_disable_option = get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id");
+            if ($category_disable_option && $category_disable_option !== 'default') {
+                $cat_option = $category_disable_option;
                 $cat_inquire_us_link = get_option("wpiudacb_inqure_us_link_$cat->term_id");
+                break; // Exit loop early if a relevant option is found
             }
         }
     }
 
-    $inquire_us_added = FALSE;
-
-    if ($cat_option != 'default') {
-        $html = '';
-
-        if ($cat_option == 'inquire_us') {
-            $html = '<a href="' . esc_url($cat_inquire_us_link) . '" target="_blank" class="button add_to_cart_button">'.__('Inquire Us', 'themelocationratc_hp').'</a>';
-
-            $inquire_us_added = true;
-        }
+    // Handle category-level 'inquire us' option
+    if ($cat_option === 'inquire_us') {
+        $html = '<a href="' . esc_url($cat_inquire_us_link) . '" target="_blank" class="button add_to_cart_button">' . esc_html__('Inquire Us', 'themelocationratc_hp') . '</a>';
         return $html;
     }
 
-    if (!is_null($disable_cart_option) && $disable_cart_option[0] == 'remove_button' && !$inquire_us_added) {
-        $html = '';
+    // Handle product-level options
+    if ($disable_cart_option === 'remove_button') {
+        $html = ''; // Remove "Add to Cart" button
         return $html;
-    }    
+    }
     
-    if (!is_null($disable_cart_option) && $disable_cart_option[0] == 'inquire_us' && !$inquire_us_added) {
-        $html = '<a href="' . esc_url($wpiudacb_inqure_us_link[0]) . '" target="_blank" class="button add_to_cart_button">'.__('Inquire Us', 'themelocationratc_hp').'</a>';
+    if ($disable_cart_option === 'inquire_us') {
+        $html = '<a href="' . esc_url($wpiudacb_inqure_us_link) . '" target="_blank" class="button add_to_cart_button">' . esc_html__('Inquire Us', 'themelocationratc_hp') . '</a>';
         return $html;
     }
 
-    return $html;
+    return $html; // Return the original HTML if no conditions are met
 }
 
 /**
@@ -373,43 +405,49 @@ add_action('woocommerce_before_single_product_summary', 'wpiudacb_user_filter_ad
 if (!function_exists('wpiudacb_user_filter_addtocart_for_single_product_page')) {
 
     function wpiudacb_user_filter_addtocart_for_single_product_page() {
-        global $product;
-        global $post;
-        $terms = get_the_terms($product->get_id(), 'product_cat');
+        global $product, $post;
+    
+        // Ensure $product is valid
+        if (!$product || !is_a($product, 'WC_Product')) {
+            return;
+        }
+    
+        // Default values for category options
         $cat_option = 'default';
         $cat_inquire_us_link = '';
-        if (!empty($terms)) {
+    
+        // Get product categories and check for 'disable add to cart' and 'inquire us' link settings
+        $terms = get_the_terms($product->get_id(), 'product_cat');
+        if (!empty($terms) && is_array($terms)) {
             foreach ($terms as $cat) {
-                if (get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id") && get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id") != 'Default') {
-                    $cat_option = get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id");
+                $category_option = get_option("wpiudacb_category_disable_add_to_cart_$cat->term_id");
+                if ($category_option && $category_option !== 'default') {
+                    $cat_option = $category_option;
                     $cat_inquire_us_link = get_option("wpiudacb_inqure_us_link_$cat->term_id");
+                    break; // Exit loop early if a relevant option is found
                 }
             }
         }
-        if ($cat_option != 'default') {
-            add_action( 'woocommerce_before_add_to_cart_button', 'wpiudacb_user_woocommerce_before_add_to_cart_button', 10, 0 ); 
-            add_action( 'woocommerce_after_add_to_cart_button', 'wpiudacb_user_woocommerce_after_add_to_cart_button', 10, 0 ); 
-
-            //remove_action('woocommerce_single_product_summary', 'woocommerce_template_single_add_to_cart', 30);
-            if ($cat_option == 'inquire_us') {
-                $product->inqure_us_url = $cat_inquire_us_link;
+    
+        // Check product-level settings
+        $product_option = get_post_meta($product->get_id(), 'wpiudacb_disable_add_to_cart', true);
+    
+        // Remove the "Add to Cart" button and display the "Inquire Us" button if necessary
+        if ($cat_option === 'inquire_us' || $product_option === 'inquire_us') {
+            $inquire_us_link = $cat_option === 'inquire_us' ? $cat_inquire_us_link : get_post_meta($post->ID, 'wpiudacb_inqure_us_link', true);
+    
+            if (!empty($inquire_us_link)) {
+                $product->inqure_us_url = $inquire_us_link;
                 add_action('woocommerce_after_add_to_cart_form', 'wpiudacb_add_inqure_us_button');
             }
         }
-
-        $text = get_post_custom_values('wpiudacb_disable_add_to_cart', $product->get_id());
-        if (!is_null($text) && $text[0] != 'default') {
-            add_action( 'woocommerce_before_add_to_cart_button', 'wpiudacb_user_woocommerce_before_add_to_cart_button', 10, 0 ); 
-            add_action( 'woocommerce_after_add_to_cart_button', 'wpiudacb_user_woocommerce_after_add_to_cart_button', 10, 0 ); 
-
-            //remove_action('woocommerce_single_product_summary', 'woocommerce_template_single_add_to_cart', 30);
+    
+        // Remove the "Add to Cart" button if any option disables it
+        if ($cat_option !== 'default' || $product_option && $product_option !== 'default') {
+            add_action('woocommerce_before_add_to_cart_button', 'wpiudacb_user_woocommerce_before_add_to_cart_button', 10);
+            add_action('woocommerce_after_add_to_cart_button', 'wpiudacb_user_woocommerce_after_add_to_cart_button', 10);
         }
-        if (!is_null($text) && $text[0] == 'inquire_us') {
-            $wpiudacb_inqure_us_link = get_post_meta($post->ID, 'wpiudacb_inqure_us_link');
-            $product->inqure_us_url = $wpiudacb_inqure_us_link[0];
-            add_action('woocommerce_after_add_to_cart_form', 'wpiudacb_add_inqure_us_button');
-        }
-    }
+    }   
 
 }
 
@@ -476,23 +514,14 @@ add_action('woocommerce_process_product_meta', 'woocommerce_process_product_meta
 if (!function_exists('woocommerce_process_product_meta_fields_save')) {
 
     function woocommerce_process_product_meta_fields_save($post_id) {
-        $wpiudacb_disable_add_to_cart = isset($_POST['wpiudacb_disable_add_to_cart']) ? $_POST['wpiudacb_disable_add_to_cart'] : 'Default';
+        // Sanitize and save 'disable add to cart' option
+        $wpiudacb_disable_add_to_cart = isset($_POST['wpiudacb_disable_add_to_cart']) ? sanitize_text_field($_POST['wpiudacb_disable_add_to_cart']) : '';
         update_post_meta($post_id, 'wpiudacb_disable_add_to_cart', $wpiudacb_disable_add_to_cart);
-
-        $wpiudacb_inqure_us_link = isset($_POST['wpiudacb_inqure_us_link']) ? $_POST['wpiudacb_inqure_us_link'] : '';
+    
+        // Sanitize and save 'inquire us' link
+        $wpiudacb_inqure_us_link = isset($_POST['wpiudacb_inqure_us_link']) ? esc_url_raw($_POST['wpiudacb_inqure_us_link']) : '';
         update_post_meta($post_id, 'wpiudacb_inqure_us_link', $wpiudacb_inqure_us_link);
-    }
-
-}
-
-/**
- * Edit Callback
- */
-if (!function_exists('wpiudacb_edit_form')) {
-
-    function wpiudacb_edit_form() {
-        
-    }
+    }   
 
 }
 
@@ -517,56 +546,62 @@ add_filter( 'woocommerce_product_data_tabs', 'wpiudacb_remove_cart_data_tab' );
  */
 function wpiudacb_remove_cart_data_content() {
     global $post;
-    ?><div id='wpiudacb_remove_cart_button' class='panel woocommerce_options_panel'><?php
-        ?><div class='options_group'><?php
-            
-        woocommerce_wp_select(
-          array(
-            'id' => 'wpiudacb_disable_add_to_cart',
-            'label' => __('Alter Add to Cart Button', 'woocommerce'),
-            'options' => array(
-                'default' => __('Default', 'woocommerce'),
-                'remove_button' => __('Remove Button', 'woocommerce'),
-                'inquire_us' => __('Inquire Us', 'woocommerce')
-            )
-          )
-        );
-        woocommerce_wp_text_input(
-          array(
-            'id' => 'wpiudacb_inqure_us_link',
-            'label' => __('Inquire Us Link', 'woocommerce'),
-            'placeholder' => 'http://',
-            'desc_tip' => 'true',
-            'description' => __('Enter the URL to Inquire Us button.', 'woocommerce'),
-            'value' => get_post_meta($post->ID, 'wpiudacb_inqure_us_link', true)
-          )
-        );
-        ?>
-            
-        <p class="form-field wpiudacb_inqure_us_link_field ">
-        <label for="wpiudacb_inqure_us_link"><?php echo esc_html__( 'Hide Price', 'woocommerce' ); ?></label> <a href="https://www.themelocation.com/remove-cart-button-plugin" style="text-decoration: none; color:red;"><?php echo esc_html__( 'Upgrade Premium Version', 'woocommerce' ); ?></a> </p>
-        <p class="form-field wpiudacb_inqure_us_link_field ">
-        <label for="wpiudacb_inqure_us_link"><?php echo esc_html__('Inquire Us Text', 'woocommerce'); ?></label><a href="https://www.themelocation.com/remove-cart-button-plugin" style="text-decoration: none; color:red;"><?php echo esc_html__( 'Upgrade Premium Version', 'woocommerce' ); ?></a> </p>
+    ?>
+    <div id='wpiudacb_remove_cart_button' class='panel woocommerce_options_panel'>
+        <div class='options_group'>
+            <?php
+            woocommerce_wp_select(
+              array(
+                'id' => 'wpiudacb_disable_add_to_cart',
+                'label' => __('Alter Add to Cart Button', 'woocommerce'),
+                'options' => array(
+                    'default' => __('Default', 'woocommerce'),
+                    'remove_button' => __('Remove Button', 'woocommerce'),
+                    'inquire_us' => __('Inquire Us', 'woocommerce')
+                )
+              )
+            );
+            woocommerce_wp_text_input(
+              array(
+                'id' => 'wpiudacb_inqure_us_link',
+                'label' => __('Inquire Us Link', 'woocommerce'),
+                'placeholder' => 'http://',
+                'desc_tip' => 'true',
+                'description' => __('Enter the URL to Inquire Us button.', 'woocommerce'),
+                'value' => get_post_meta($post->ID, 'wpiudacb_inqure_us_link', true)
+              )
+            );
+            ?>
+
+            <p class="form-field wpiudacb_inqure_us_link_field ">
+                <label for="wpiudacb_inqure_us_link"><?php echo esc_html__( 'Hide Price', 'woocommerce' ); ?></label>
+                <a href="https://www.themelocation.com/remove-cart-button-plugin" style="text-decoration: none; color:red;"><?php echo esc_html__( 'Upgrade Premium Version', 'woocommerce' ); ?></a>
+            </p>
+            <p class="form-field wpiudacb_inqure_us_link_field ">
+                <label for="wpiudacb_inqure_us_link"><?php echo esc_html__('Inquire Us Text', 'woocommerce'); ?></label>
+                <a href="https://www.themelocation.com/remove-cart-button-plugin" style="text-decoration: none; color:red;"><?php echo esc_html__( 'Upgrade Premium Version', 'woocommerce' ); ?></a>
+            </p>
         </div>
-
-    </div><?php
+    </div>
+    <?php
 }
-add_action( 'woocommerce_product_data_panels', 'wpiudacb_remove_cart_data_content' );
-
+add_action('woocommerce_product_data_panels', 'wpiudacb_remove_cart_data_content');
 
 function wpiudacb_custom_css() {
-  // if ( class_exists('WooCommerce') && is_product()) {
-    # code...
-    echo '<style>#woocommerce-product-data ul.wc-tabs li.wpiudacb-cart_options a::before {
-    font-family: Dashicons;
-    content: "\f174";
-    }</style>';
-  // }
+    // CSS to be applied in the admin area
+    $custom_css = '
+        #woocommerce-product-data ul.wc-tabs li.wpiudacb-cart_options a::before {
+            font-family: Dashicons;
+            content: "\\f174"; /* Use double backslashes to avoid accidental escapes */
+        }
+    ';
+    // Using `wp_add_inline_style` is ideal if you have a registered admin style; otherwise, use `admin_print_styles`, but be cautious.
+    echo '<style type="text/css">' . esc_attr($custom_css) . '</style>';
 }
+
 add_action('admin_head', 'wpiudacb_custom_css');
 
 /*ENDS FIGARTS customizations*/
-
 /**
  * The code that runs during plugin deactivation.
  */
