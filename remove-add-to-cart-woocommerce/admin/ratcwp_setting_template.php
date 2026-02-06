@@ -12,6 +12,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div class="hide_price_divs" style="padding-top: 0">
 
 			<div id="hide_div">
+
+                <div class="hide_div">
+                    <label><?php echo esc_html__( 'Showcase Only Mode', 'themelocationratc_hp' ); ?></label>
+                    <div class="ratcwp_hide_field">
+                        <p style="color:red; margin: 0;"><a href="https://www.themelocation.com/remove-cart-button-plugin/" target="_blank" style="text-decoration: none; color: red;" class="asked-for-premium">Upgrade Premium Version</a></p>
+                        <p><?php echo esc_html__( 'If this option is checked then "Add to Cart" button in the shop page and single page is hidden.', 'themelocationratc_hp' ); ?></p>
+                    </div>
+                </div>
+
 				<div class="hide_div">
 					<label><?php echo esc_html__('Hide for All Users', 'themelocationratc_hp'); ?></label>
 					<div class="ratcwp_hide_field">
@@ -36,7 +45,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<select class="select_box wc-enhanced-select sel2" name="ratcwp_hide_user_role[]" id="ratcwp_hide_user_role"  multiple='multiple'>
 
 							<?php
-							$ratcwprole_hide_user_role = unserialize(get_option('ratcwp_hide_user_role'));
+							$ratcwprole_hide_user_role = maybe_unserialize(get_option('ratcwp_hide_user_role'));
+							$ratcwprole_hide_user_role = is_array($ratcwprole_hide_user_role) ? $ratcwprole_hide_user_role : array();
 							
 							global $wp_roles;
 							$roles = $wp_roles->get_names();
@@ -67,7 +77,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<div class="hide_div" id="hp_price">
 					<label><?php echo esc_html__('Price Text', 'themelocationratc_hp'); ?></label>
 					<div class="ratcwp_hide_field">
-						<input type="text" name="ratcwp_price_text" id="ratcwp_price_text" class="ratcwp_hp_input_field" />
+						<input type="text" name="ratcwp_price_text" id="ratcwp_price_text" class="ratcwp_hp_input_field" value="<?php echo esc_attr(get_option('ratcwp_price_text')); ?>" />
 						<p><?php echo esc_html__('This text will be shown in place of price in archive and product pages.', 'themelocationratc_hp'); ?></p>
 					</div>
 				</div>
@@ -116,7 +126,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<div class="ratcwp_hide_field">
 						<select class="select_box wc-enhanced-select sel_pros" name="ratcwp_hide_products[]" id="ratcwp_hide_products"  multiple='multiple'>
 							<?php
-								$ratcwp_hide_products = unserialize(get_option('ratcwp_hide_products'));
+								$ratcwp_hide_products = maybe_unserialize(get_option('ratcwp_hide_products'));
+								$ratcwp_hide_products = is_array($ratcwp_hide_products) ? $ratcwp_hide_products : array();
 
 							if (!empty($ratcwp_hide_products)) {
 
@@ -143,7 +154,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<ul>
 								<?php
 
-								$pre_vals = unserialize(get_option('cps_hide_categories'));
+								$pre_vals = maybe_unserialize(get_option('cps_hide_categories'));
+								$pre_vals = is_array($pre_vals) ? $pre_vals : array();
 
 								$args = array(
 									'taxonomy' => 'product_cat',

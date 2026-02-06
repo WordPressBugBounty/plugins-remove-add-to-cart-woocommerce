@@ -1,11 +1,11 @@
 <?php
 /*
-  Plugin Name: woo-inquire-us-and-disable-add-to-cart-button
+  Plugin Name: WooCommerce Inquire Us & Disable Add To Cart Button
   Plugin URI: https://www.themelocation.com/remove-cart-button-plugin/
   Description: This plugin removes add to cart from individual Product, Whole Category. It changes add to cart button to contact us button. It also hide product Price from Category as well as individual Product. We provide best possible support.
   Requires at least: 4.6
-  Tested up to: 6.7.1
-  Version: 1.4.7
+  Tested up to: 6.8
+  Version: 1.4.8
   Author: themelocation
   Author URI: https://www.themelocation.com
  */

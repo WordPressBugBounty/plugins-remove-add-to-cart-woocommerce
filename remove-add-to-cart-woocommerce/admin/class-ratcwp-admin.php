@@ -8,6 +8,27 @@ if ( !class_exists( 'Ratcwp_Hide_Price_Admin' ) ) {
 
 	class Ratcwp_Hide_Price_Admin extends Ratcwp_Hide_Price {
 
+		/**
+		 * Safely unserialize data with validation
+		 *
+		 * @param string $data Serialized data
+		 * @return array|false Unserialized data or false on failure
+		 */
+		private function safe_unserialize( $data ) {
+			if ( empty( $data ) ) {
+				return array();
+			}
+			
+			// Only allow unserialize of arrays
+			$unserialized = maybe_unserialize( $data );
+			
+			if ( ! is_array( $unserialized ) ) {
+				return array();
+			}
+			
+			return $unserialized;
+		}
+
 		public function __construct() {
 
 			add_action( 'admin_menu', array( $this, 'ratcwp_custom_menu_admin' ) );
@@ -28,6 +49,7 @@ if ( !class_exists( 'Ratcwp_Hide_Price_Admin' ) ) {
 			wp_enqueue_script( 'themelocationratc_hp_admin_js', plugins_url( '../assets/js/ratcwp_admin.js', __FILE__ ), false, '' );
 			$ratcwp_data = array(
 				'admin_url'  => admin_url('admin-ajax.php'),
+				'nonce'      => wp_create_nonce('ratcwp_ajax_nonce'),
 			);
 			wp_localize_script( 'themelocationratc_hp_admin_js', 'ratcwp_php_vars', $ratcwp_data );
 			//select2 css and js
@@ -62,19 +84,21 @@ if ( !class_exists( 'Ratcwp_Hide_Price_Admin' ) ) {
 		}
 
 		public function cspsearchProducts() {
-
-
-			if (isset($_POST['q']) && '' != $_POST['q']) {
-
-
-				$pro = sanitize_text_field( $_POST['q'] );
-
-			} else {
-
-				$pro = '';
-
+			// Check user capabilities
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'themelocationratc_hp' ) );
 			}
 
+			// Verify nonce
+			if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'ratcwp_ajax_nonce' ) ) {
+				wp_die( esc_html__( 'Security check failed.', 'themelocationratc_hp' ) );
+			}
+
+			if (isset($_POST['q']) && '' != $_POST['q']) {
+				$pro = sanitize_text_field( $_POST['q'] );
+			} else {
+				$pro = '';
+			}
 
 			$data_array = array();
 			$args       = array(
@@ -86,31 +110,31 @@ if ( !class_exists( 'Ratcwp_Hide_Price_Admin' ) ) {
 			$pros       = get_posts($args);
 
 			if ( !empty($pros)) {
-
 				foreach ($pros as $proo) {
-
 					$title        = ( mb_strlen( $proo->post_title ) > 50 ) ? mb_substr( $proo->post_title, 0, 49 ) . '...' : $proo->post_title;
 					$data_array[] = array( $proo->ID, $title ); // array( Post ID, Post Title )
 				}
 			}
 			
-			echo json_encode( $data_array );
-
-			die();
+			wp_send_json( $data_array );
 		}
 
 		public function cspsearchUsers() {
-
-			if (isset($_POST['q']) && '' != $_POST['q']) {
-				
-				$pro = sanitize_text_field( $_POST['q'] );
-
-			} else {
-
-				$pro = '';
-
+			// Check user capabilities
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'themelocationratc_hp' ) );
 			}
 
+			// Verify nonce
+			if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'ratcwp_ajax_nonce' ) ) {
+				wp_die( esc_html__( 'Security check failed.', 'themelocationratc_hp' ) );
+			}
+
+			if (isset($_POST['q']) && '' != $_POST['q']) {
+				$pro = sanitize_text_field( $_POST['q'] );
+			} else {
+				$pro = '';
+			}
 
 			$data_array  = array();
 			$users       = new WP_User_Query( array(
@@ -125,18 +149,13 @@ if ( !class_exists( 'Ratcwp_Hide_Price_Admin' ) ) {
 			$users_found = $users->get_results();
 
 			if ( !empty($users_found)) {
-
 				foreach ($users_found as $proo) {
-
 					$title        = $proo->display_name . '(' . $proo->user_email . ')';
 					$data_array[] = array( $proo->ID, $title ); // array( User ID, User name and email )
 				}
 			}
 			
-			echo json_encode( $data_array );
-
-			die();
-
+			wp_send_json( $data_array );
 		}
 
 		public function ratcwprolebase_save_data() {
@@ -158,20 +177,23 @@ if ( !class_exists( 'Ratcwp_Hide_Price_Admin' ) ) {
 					update_option($field, isset($_POST[$field]) ? 'yes' : '');
 				}
 
-				if( isset($_POST['ratcwp_hide_user_role']) ) {
-					update_option('ratcwp_hide_user_role', serialize($_POST['ratcwp_hide_user_role']));
+				if( isset($_POST['ratcwp_hide_user_role']) && is_array($_POST['ratcwp_hide_user_role']) ) {
+					$sanitized_roles = array_map('sanitize_text_field', $_POST['ratcwp_hide_user_role']);
+					update_option('ratcwp_hide_user_role', $sanitized_roles);
 				}		
 				
 				if( isset($_POST['ratcwp_hide_cart_button']) ) {
 					update_option('ratcwp_hide_cart_button', sanitize_text_field($_POST['ratcwp_hide_cart_button']));
 				}		
 				
-				if( isset($_POST['ratcwp_hide_products']) ) {
-					update_option('ratcwp_hide_products', serialize($_POST['ratcwp_hide_products']));
+				if( isset($_POST['ratcwp_hide_products']) && is_array($_POST['ratcwp_hide_products']) ) {
+					$sanitized_products = array_map('intval', $_POST['ratcwp_hide_products']);
+					update_option('ratcwp_hide_products', $sanitized_products);
 				}		
 				
-				if( isset($_POST['cps_hide_categories']) ) {
-					update_option('cps_hide_categories', serialize($_POST['cps_hide_categories']));
+				if( isset($_POST['cps_hide_categories']) && is_array($_POST['cps_hide_categories']) ) {
+					$sanitized_categories = array_map('intval', $_POST['cps_hide_categories']);
+					update_option('cps_hide_categories', $sanitized_categories);
 				}
 			
 				$text_fields = array(
@@ -182,7 +204,11 @@ if ( !class_exists( 'Ratcwp_Hide_Price_Admin' ) ) {
 			
 				foreach ($text_fields as $field) {
 					if( isset($_POST[$field]) ) {
-						update_option($field, sanitize_text_field($_POST[$field]));
+						if ( $field === 'ratcwp_cart_button_link' ) {
+							update_option($field, esc_url_raw($_POST[$field]));
+						} else {
+							update_option($field, sanitize_text_field($_POST[$field]));
+						}
 					}
 				}
 			}
